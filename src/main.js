@@ -6,6 +6,7 @@ Vue.use(VueRouter);
 
 import Home from "./components/HomeView.vue";
 import Login from "./components/LoginView.vue";
+import GithubCallback from "./components/GithubCallback.vue";
 
 const router = new VueRouter({
   mode: "history",
@@ -13,6 +14,7 @@ const router = new VueRouter({
   routes: [
     { path: "/", component: Home },
     { path: "/login", component: Login },
+    { path: "/login/callback", component: GithubCallback },
   ],
 });
 
