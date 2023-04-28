@@ -23,9 +23,6 @@ export default {
     return {
       
     };
-  },
-  mounted() {
-    console.log({ router: this.$router });
   }
  
 }

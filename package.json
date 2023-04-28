@@ -3,13 +3,16 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "serve": "vue-cli-service serve",
+    "serve": "concurrently \"vue-cli-service serve\" \"node express.js\" ",
+
     "build": "vue-cli-service build",
     "lint": "vue-cli-service lint"
   },
   "dependencies": {
     "axios": "^1.4.0",
     "core-js": "^3.8.3",
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
     "http-proxy-middleware": "^2.0.6",
     "vue": "^2.6.14",
     "vue-router": "^2.7.0"
@@ -20,6 +23,7 @@
     "@vue/cli-plugin-babel": "~5.0.0",
     "@vue/cli-plugin-eslint": "~5.0.0",
     "@vue/cli-service": "~5.0.0",
+    "concurrently": "^8.0.1",
     "eslint": "^7.32.0",
     "eslint-plugin-vue": "^8.0.3",
     "vue-template-compiler": "^2.6.14"

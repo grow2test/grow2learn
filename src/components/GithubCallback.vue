@@ -47,6 +47,7 @@
                 </tbody>
             </table>
         </div>
+        <div v-if="errorMsg">There is some error, please try again.</div>
     </div>
 </template>
 
@@ -61,30 +62,55 @@ export default {
             currentRepo: null,
             branches: [],
             currentBranch: null,
-            commits: []
+            commits: [],
+            errorMsg: false,
         };
     },
     methods: {
+        async getAccessToken() {
+         try {
+            const response = await axios.get('http://localhost:3000/getAuthCode', {
+                params: {
+                    code: this.$route.query.code,
+                }
+            });
+             const accessToken = response.data.access_token;
+             if (accessToken) {
+                localStorage.setItem('access_token', accessToken);
+            }
+            this.getRepositories();
+
+            } catch (error) {
+                this.errorMsg = true
+                console.error(error);
+            } finally {
+                this.loading = false;
+            }
+        },
         async getRepositories() {
             try {
                 this.loading = true;
+                const accessToken = localStorage.getItem('access_token')
+
                 const response = await axios.get('https://api.github.com/user/repos', {
                     headers: {
-                        Authorization: `Bearer ${process.env.VUE_APP_ACCESS_TOKEN}`
+                        Authorization: `Bearer ${accessToken}`
                     }
                 });
                 this.repositories = response.data;
             } catch (error) {
-                console.error(error);
+                this.errorMsg = true
             } finally {
                 this.loading = false;
             }
         },
         async getBranches(repo) {
             try {
+                const accessToken = localStorage.getItem('access_token')
+
                 const response = await axios.get(`https://api.github.com/repos/${repo.full_name}/branches`, {
                     headers: {
-                        Authorization: `Bearer ${process.env.VUE_APP_ACCESS_TOKEN}`
+                        Authorization: `Bearer ${accessToken}`
                     }
                 });
                 this.currentRepo = repo;
@@ -92,25 +118,34 @@ export default {
                 this.currentBranch = null;
                 this.commits = [];
             } catch (error) {
+                this.errorMsg = true
                 console.error(error);
             }
         },
         async getCommits(branch) {
             try {
+                const accessToken = localStorage.getItem('access_token')
+
                 const response = await axios.get(`https://api.github.com/repos/${this.currentRepo.full_name}/commits?sha=${branch.name}`, {
                     headers: {
-                        Authorization: `Bearer ${process.env.VUE_APP_ACCESS_TOKEN}`
+                        Authorization: `Bearer ${accessToken}`
                     }
                 });
                 this.currentBranch = branch;
                 this.commits = response.data;
             } catch (error) {
+                this.errorMsg = true
                 console.error(error);
             }
         }
     },
     mounted() {
-        this.getRepositories();
+        const token = localStorage.getItem("access_token")
+        if (token === null || token === "undefined") {
+            this.getAccessToken()
+        } else {
+            this.getRepositories();
+        }
     }  
 };
 </script>
