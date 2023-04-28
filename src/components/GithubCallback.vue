@@ -111,13 +111,7 @@ export default {
     },
     mounted() {
         this.getRepositories();
-    },
-    props: {
-        accessToken: {
-            type: String,
-            required: true
-        }
-    }
+    }  
 };
 </script>
 
