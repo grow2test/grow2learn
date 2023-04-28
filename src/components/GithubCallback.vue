@@ -1,58 +1,52 @@
 <template>
     <div class="container">
-        <h1 class="title">My Repositories</h1>
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Name</th>
-                    <th>Description</th>
-                    <th>Language</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr v-for="repo in repositories" :key="repo.id">
-                    <td>{{ repo.name }}</td>
-                    <td>{{ repo.description }}</td>
-                    <td>{{ repo.language }}</td>
-                </tr>
-            </tbody>
-        </table>
+        <h1>Github Repositories</h1>
+        <div v-if="loading">
+            <p>Loading...</p>
+        </div>
+        <div v-else>
+            <ul class="list-repo">
+                <li v-for="repo in repositories" :key="repo.id">
+                    <a href="#" @click.prevent="getBranches(repo)">{{ repo.name }}</a>
+                </li>
+            </ul>
+        </div>
 
-        <h1 class="title">Recent Commits</h1>
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Repository</th>
-                    <th>Message</th>
-                    <th>Author</th>
-                    <th>Date</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr v-for="commit in commits" :key="commit.sha">
-                    <td>{{ commit.repository }}</td>
-                    <td>{{ commit.commit.message }}</td>
-                    <td>{{ commit.commit.author.name }}</td>
-                    <td>{{ commit.commit.author.date }}</td>
-                </tr>
-            </tbody>
-        </table>
+        <div v-if="currentRepo">
+            <h2>{{ currentRepo.name }} Branches</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th >Name</th>
+                        <th>Commit History</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr v-for="branch in branches" :key="branch.name">
+                        <td class="branch-name">{{ branch.name }}</td>
+                        <td><button @click="getCommits(branch)">View Commits</button></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
 
-        <h1 class="title">Branches</h1>
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Name</th>
-                    <th>Last Commit</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr v-for="branch in branches" :key="branch.name">
-                    <td>{{ branch.name }}</td>
-                    <td>{{ branch.commit.sha }}</td>
-                </tr>
-            </tbody>
-        </table>
+        <div v-if="currentBranch">
+            <h2>Commits for {{ currentBranch.name }}</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Author</th>
+                        <th>Message</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr v-for="commit in commits" :key="commit.sha">
+                        <td>{{ commit.commit.author.name }}</td>
+                        <td>{{ commit.commit.message }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
     </div>
 </template>
 
@@ -60,88 +54,128 @@
 import axios from 'axios';
 
 export default {
-    name: "GithubCallback",
     data() {
         return {
             repositories: [],
-            commits: [],
+            loading: false,
+            currentRepo: null,
             branches: [],
+            currentBranch: null,
+            commits: []
         };
     },
-    async mounted() {
-        // Fetch repositories
-        const repoResponse = await axios.get('https://api.github.com/user/repos', {
-            headers: {
-                Authorization: `token ${process.env.VUE_APP_ACCESS_TOKEN}`,
-            },
-        });
-        this.repositories = repoResponse.data;
-
-        // Fetch recent commits
-        const commitResponse = await axios.get('https://api.github.com/user/repos?sort=updated', {
-            headers: {
-                Authorization: `token ${process.env.VUE_APP_ACCESS_TOKEN}`,
-            },
-        });
-        const recentRepos = commitResponse.data.slice(0, 5);
-        const commitPromises = recentRepos.map(repo =>
-            axios.get(`https://api.github.com/repos/${repo.owner.login}/${repo.name}/commits`, {
-                headers: {
-                    Authorization: `token ${process.env.VUE_APP_ACCESS_TOKEN}`,
-                },
-            })
-        );
-        const commitResponses = await Promise.all(commitPromises);
-        this.commits = commitResponses.flatMap(response => response.data.map(commit => ({
-            repository: response.config.url.match(/repos\/([^/]+)\/([^/]+)/)[2], commit
-        })));
-
-        // Fetch branches
-        const branchResponse = await axios.get(`https://api.github.com/repos/${this.repositories[0].owner.login}/${this.repositories[0].name}/branches`, {
-            headers: {
-                Authorization: `token ${process.env.VUE_APP_ACCESS_TOKEN}`,
-            },
-        });
-        this.branches = branchResponse.data;
+    methods: {
+        async getRepositories() {
+            try {
+                this.loading = true;
+                const response = await axios.get('https://api.github.com/user/repos', {
+                    headers: {
+                        Authorization: `Bearer ${process.env.VUE_APP_ACCESS_TOKEN}`
+                    }
+                });
+                this.repositories = response.data;
+            } catch (error) {
+                console.error(error);
+            } finally {
+                this.loading = false;
+            }
+        },
+        async getBranches(repo) {
+            try {
+                const response = await axios.get(`https://api.github.com/repos/${repo.full_name}/branches`, {
+                    headers: {
+                        Authorization: `Bearer ${process.env.VUE_APP_ACCESS_TOKEN}`
+                    }
+                });
+                this.currentRepo = repo;
+                this.branches = response.data;
+                this.currentBranch = null;
+                this.commits = [];
+            } catch (error) {
+                console.error(error);
+            }
+        },
+        async getCommits(branch) {
+            try {
+                const response = await axios.get(`https://api.github.com/repos/${this.currentRepo.full_name}/commits?sha=${branch.name}`, {
+                    headers: {
+                        Authorization: `Bearer ${process.env.VUE_APP_ACCESS_TOKEN}`
+                    }
+                });
+                this.currentBranch = branch;
+                this.commits = response.data;
+            } catch (error) {
+                console.error(error);
+            }
+        }
     },
+    mounted() {
+        this.getRepositories();
+    },
+    props: {
+        accessToken: {
+            type: String,
+            required: true
+        }
+    }
 };
 </script>
 
 <style>
+body {
+  font-family: Tahoma, sans-serif;
+}
 .container {
-    max-width: 800px;
-    margin: 0 auto;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
 }
 
-.title {
-    font-size: 2rem;
-    margin-top: 2rem;
-    margin-bottom: 1rem;
+table {
+  cursor: pointer;
 }
 
-.table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-bottom: 2rem;
+th,
+td {
+  padding: 5px;
 }
 
-.table th {
-    text-align: left;
-    padding: 0.5rem;
-    background-color: #f5f5f5;
-    border-bottom: 2px solid #ccc;
+h1 {
+  font-size: 2em;
+  margin-bottom: 20px;
 }
 
-.table td {
-    padding: 0.5rem;
-    border-bottom: 1px solid #ccc;
+h2 {
+  font-size: 1.5em;
+  margin-bottom: 10px;
 }
 
-.table td:first-child {
-    width: 30%;
+ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
 }
 
-.table td:last-child {
-    width: 20%;
+li {
+  margin-bottom: 10px;
+}
+
+a {
+  text-decoration: none;
+  color: #333;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+.loading {
+  font-style: italic;
+}
+.branch-name {
+    font-weight: bold;
+}
+.list-repo {
+    list-style-type: disc;
 }
 </style>
