@@ -9,7 +9,7 @@ export default {
     name: "GithubLogin",
     methods: {
         login() {
-            const clientId = "YOUR_CLIENT_ID";
+            const clientId = process.env.VUE_APP_GITHUB_CLIENT_ID;
             const redirectUri = "http://localhost:8080/login/callback";
             const url = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&scope=user`;
             window.location.href = url;
